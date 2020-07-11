@@ -14,7 +14,7 @@ eval "$(minikube docker-env --profile=minikube)" && export DOCKER_CLI='docker'
 
 curl -fsSL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
 
-helm upgrade \
+helm upgrade --wait \
   -n kube-system -i rawfile-csi \
   --set serviceMonitor.enabled=false \
   --set controller.image.repository=$CI_IMAGE_REPO --set controller.image.tag=$CI_TAG \
