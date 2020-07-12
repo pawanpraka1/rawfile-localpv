@@ -1,10 +1,16 @@
 import sys
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def migrate_0_to_1(data: dict) -> dict:
     data["schema_version"] = 1
+    return data
+
+
+def migrate_1_to_2(data: dict) -> dict:
+    data["schema_version"] = 2
+    data.setdefault("fs_type", "ext4")
     return data
 
 
