@@ -142,6 +142,8 @@ class RawFileNodeServicer(csi_pb2_grpc.NodeServicer):
                 run(f"resize2fs {dev}")
             elif fs_type == "btrfs":
                 run(f"btrfs filesystem resize max {volume_path}")
+            elif fs_type == "xfs":
+                run(f"xfs_growfs -d {dev}")
             else:
                 raise Exception(f"Unsupported fsType: {fs_type}")
             break
