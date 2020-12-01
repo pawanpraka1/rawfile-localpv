@@ -7,11 +7,10 @@ import rawfile_util
 from consts import PROVISIONER_VERSION, PROVISIONER_NAME
 from csi import csi_pb2, csi_pb2_grpc
 from declarative import be_symlink, be_absent
-from metrics import volume_stats
+from metrics import device_stats
 from orchestrator.k8s import volume_to_node, run_on_node
-from rawfile_util import attach_loop, detach_loops
 from remote import init_rawfile, scrub, expand_rawfile
-from util import log_grpc_request, run
+from util import log_grpc_request
 
 NODE_NAME_TOPOLOGY_KEY = "hostname"
 
@@ -87,26 +86,23 @@ class RawFileNodeServicer(csi_pb2_grpc.NodeServicer):
 
     @log_grpc_request
     def NodeStageVolume(self, request, context):
-        img_file = rawfile_util.img_file(request.volume_id)
-        loop_file = attach_loop(img_file)
+        lv_path = rawfile_util.lv_path(request.volume_id)
         staging_path = request.staging_target_path
         staging_dev_path = Path(f"{staging_path}/dev")
-        be_symlink(path=staging_dev_path, to=loop_file)
+        be_symlink(path=staging_dev_path, to=lv_path)
         return csi_pb2.NodeStageVolumeResponse()
 
     @log_grpc_request
     def NodeUnstageVolume(self, request, context):
-        img_file = rawfile_util.img_file(request.volume_id)
         staging_path = request.staging_target_path
         staging_dev_path = Path(f"{staging_path}/dev")
         be_absent(staging_dev_path)
-        detach_loops(img_file)
         return csi_pb2.NodeUnstageVolumeResponse()
 
     # @log_grpc_request
     def NodeGetVolumeStats(self, request, context):
-        volume_id = request.volume_id
-        stats = volume_stats(volume_id)  # FIXME
+        lv_path = rawfile_util.lv_path(request.volume_id)
+        stats = device_stats(dev=lv_path)
         return csi_pb2.NodeGetVolumeStatsResponse(
             usage=[
                 csi_pb2.VolumeUsage(
@@ -117,10 +113,7 @@ class RawFileNodeServicer(csi_pb2_grpc.NodeServicer):
 
     @log_grpc_request
     def NodeExpandVolume(self, request, context):
-        volume_path = request.volume_path
         size = request.capacity_range.required_bytes
-        volume_path = Path(volume_path).resolve()
-        run(f"losetup -c {volume_path}")
         return csi_pb2.NodeExpandVolumeResponse(capacity_bytes=size)
 
 

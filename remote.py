@@ -20,8 +20,9 @@ def init_rawfile(volume_id, size):
 
     img_dir = rawfile_util.img_dir(volume_id)
     img_dir.mkdir(exist_ok=True)
-    img_file = Path(f"{img_dir}/disk.img")
-    if img_file.exists():
+    vg_name = "vg-test"  # FIXME
+    lv_path = Path(f"/dev/{vg_name}/{volume_id}")  # TODO: use lv_uuid instead of path
+    if lv_path.exists():
         return
     rawfile_util.patch_metadata(
         volume_id,
@@ -29,11 +30,11 @@ def init_rawfile(volume_id, size):
             "schema_version": LATEST_SCHEMA_VERSION,
             "volume_id": volume_id,
             "created_at": time.time(),
-            "img_file": img_file.as_posix(),
+            "lv_path": lv_path.as_posix(),
             "size": size,
         },
     )
-    run(f"truncate -s {size} {img_file}")
+    run(f"lvcreate {vg_name} --name {volume_id} --size {size}b")
 
 
 @remote_fn
@@ -41,10 +42,10 @@ def expand_rawfile(volume_id, size):
     import rawfile_util
     from util import run
 
-    img_file = rawfile_util.img_file(volume_id)
+    lv_path = rawfile_util.lv_path(volume_id)
     if rawfile_util.metadata(volume_id)["size"] >= size:
         return
     rawfile_util.patch_metadata(
         volume_id, {"size": size},
     )
-    run(f"truncate -s {size} {img_file}")
+    run(f"lvextend {lv_path} --size {size}b")

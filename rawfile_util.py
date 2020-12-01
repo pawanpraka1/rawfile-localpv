@@ -23,8 +23,8 @@ def metadata(volume_id):
         return {}
 
 
-def img_file(volume_id):
-    return Path(metadata(volume_id)["img_file"])
+def lv_path(volume_id):
+    return Path(metadata(volume_id)["lv_path"])
 
 
 def update_metadata(volume_id: str, obj: dict) -> dict:
